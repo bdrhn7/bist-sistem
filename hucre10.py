@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════
-#  HÜCRE 10 — ZİRVE STRATEJİSİ  (v1.3 — 16.10.2026)
+#  HÜCRE 10 — ZİRVE STRATEJİSİ  (v1.4 — 16.10.2026)
 #  Backtestten en sağlam geçen kural (hücre 9 v2 + bağımsız istatistik incelemesi):
 #    Her ayın ilk işlem günü, günlük işlem hacmi ≥ 50 mn TL olan hisselerden
 #    52 haftalık zirvesine EN YAKIN 30 hisse — eşit ağırlık — ay sonuna kadar tut.
@@ -13,8 +13,11 @@
 #     alınmaz → aracı kurum uygulamandan kontrol et, listede elle işaretle
 #   - Hisse başına dar stop YOK. Portföy düzeyinde: zirveden −%25 → yarıya indir,
 #     −%35 → dur. Son 12 ayda likit hisse ortalamasının 10 puandan fazla gerisindeyse → bırak
-#   - Gerçekçi beklenti: likit hisse ortalamasından ayda +%0,5 … +%1 fazla (backtestteki
-#     +%2,5 değil); %25-35 ihtimalle avantaj hiç yok. Bu bir deneme: ilk 6 ay küçük tutarla.
+#   - Gerçekçi beklenti (16.10.2026 uzun backtest, 2015-2026, 140 ay): kuralın SEÇİLMEDİĞİ
+#     2015-03.2024 döneminde likit hisse ortalamasına göre avantaj yok (ayda −%0,1; t −0,3).
+#     Avantaj sadece seçildiği 2024-2026 döneminde görülüyor. Beklenti: likit ortalamadan
+#     ayda 0 … +%0,2; %40-60 ihtimalle hiç avantaj yok. Getirisi piyasaya benzer bir portföy.
+#     Bu bir deneme: küçük tutarla.
 #  v1.1: Hücre 2'nin verisi bozuksa (fiyatlar boş, hisse sayısı çok az) liste OLUŞTURULMUYOR
 #        ve kaydedilmiyor; bozuk veriyle yapılmış eski bir kayıt varsa siliniyor.
 #        Fiyatların hangi günün kapanışı olduğu yazılıyor.
@@ -22,6 +25,7 @@
 #        aldığın hisseleri okuyup maliyet, kâr/zarar ve TUT / SAT durumunu gösteriyor;
 #        kâğıt üzerindeki 30 hisseyle karşılaştırıyor.
 #  v1.3: Gerçek portföyün fiyatı İsyatırım'ın son kapanışından (Yahoo bir günü boş bıraksa da güncel).
+#  v1.4: Beklenti metni 2015-2026 uzun backtestine göre güncellendi (kurallar aynı).
 # ═══════════════════════════════════════════════════════════════
 import os
 import pandas as pd
@@ -313,7 +317,7 @@ kurallar = [
     f"• Hisse başına dar stop yok. Strateji değeri zirvesinden %{YARIYA_INDIR} → yarıya indir, %{DUR} → dur.",
     f"• Son 12 ayda likit hisse ortalamasının {abs(BIRAK_12AY)} puandan fazla gerisindeyse stratejiyi bırak.",
     "• Kayıp olursa kuralları DEĞİŞTİRME (geçmişe uydurma olur). Değişiklik ancak 12 ay sonra, kayda bakarak.",
-    "• Gerçekçi beklenti: likit ortalamadan ayda +%0,5 … +%1 fazla; %25-35 ihtimalle avantaj yok.",
+    "• Gerçekçi beklenti (2015-2026 uzun backtest): piyasaya benzer getiri; likit ortalamadan ayda 0 … +%0,2 fazla, %40-60 ihtimalle hiç avantaj yok.",
     "• %30-40'lık düşüşleri göze al: bu stratejiye sadece böyle bir düşüşte birikiminin %5-8'ini kaybedeceğin kadar para koy.",
     "• Eğitim amaçlıdır, yatırım tavsiyesi değildir.",
 ]
