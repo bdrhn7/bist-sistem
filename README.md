@@ -44,7 +44,7 @@ Ay içinde bir şey yapma. Kurallar hücre 10'un başında ve Excel'deki "🧭 Z
 | `hucre2.py` | Temel tarama, puanlama, hedef fiyat → `BIST_Sistem.xlsx` | — |
 | `hucre3.py` | AL listesindeki hisselerin son 14 gün haberleri | — |
 | `hucre4.py` | Teknik analiz ve Excel sayfaları | — |
-| `hucre5.py` | Ek Excel sayfaları | — |
+| `hucre5.py` | Yapay zekâ kütüphanesini kurar (hücre 6 ve 8 için) | — |
 | `hucre6.py` | Haberlerin yapay zekâ yorumu (önbellekli) | harcar |
 | `hucre7.py` | Kapsamlı analiz: güven, DCF, giriş/çıkış, portföy | — |
 | `hucre8.py` | Makro radar | harcar |

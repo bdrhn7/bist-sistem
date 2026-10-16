@@ -44,6 +44,10 @@ def calistir(no, **ayar):
         except SyntaxError:
             raise SystemExit(f'❌ "{ad}" birden çok satırlık bir ayar; bunu buradan değiştiremezsin.')
         kod = kod[:m.start()] + f'{ad} = {deger!r}   # calistir() ile verildi' + kod[m.end():]
+    try:
+        kod = get_ipython().transform_cell(kod)          # !pip gibi Colab komutları da çalışsın
+    except NameError:
+        pass
     baslik = next((s.strip('#═ ').strip() for s in kod.splitlines()[:4] if 'HÜCRE' in s), f'Hücre {no}')
     print(f'📥 {baslik}' + (f'   | ayar: {ayar}' if ayar else ''))
     exec(compile(kod, f'hucre{no}.py', 'exec'), globals())
