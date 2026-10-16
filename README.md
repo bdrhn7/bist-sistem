@@ -40,7 +40,7 @@ Ay içinde bir şey yapma. Kurallar hücre 10'un başında ve Excel'deki "🧭 Z
 
 | Dosya | Ne yapar | Yapay zekâ kredisi |
 |---|---|---|
-| `hucre1.py` | Drive bağlantısı, Türkiye saati, dosya yaşları | — |
+| `hucre1.py` | Drive bağlantısı, Türkiye saati, İsyatırım dosyalarını otomatik indirme, dosya yaşları | — |
 | `hucre2.py` | Temel tarama, puanlama, hedef fiyat → `BIST_Sistem.xlsx` | — |
 | `hucre3.py` | AL listesindeki hisselerin son 14 gün haberleri | — |
 | `hucre4.py` | Teknik analiz ve Excel sayfaları | — |
@@ -55,7 +55,7 @@ Zirve Stratejisi sadece **1 → 2 → 10** ister. 3–9 isteğe bağlı.
 
 ## Drive'daki dosyalar (`MyDrive/isyatirim`)
 
-- İsyatırım'dan indirilenler: `temelozet.xlsx`, `temelfinansal.xlsx`, `temeltarihsel.xlsx`, `temelyabancioran.xlsx`, `temelsermaye.xlsx`, `temelperformans.xlsx`
+- İsyatırım'dan gelenler: `temelozet.xlsx`, `temelfinansal.xlsx`, `temeltarihsel.xlsx`, `temelyabancioran.xlsx`, `temelsermaye.xlsx`, `temelperformans.xlsx` — hücre 1 bunları 12 saatten eskiyse "Temel Değerler ve Oranlar" sayfasından kendisi indirir (zorla: `calistir(1, ISY_ZORLA=True)`)
 - Sistemin yazdıkları: `BIST_Sistem.xlsx`, `BIST_Tam_KAP_v9_11mart.xlsx`, `zirve_kayit.csv`, `sistem_kayit.csv`
 - Gerçek alım-satımlar: `gercek_portfoy.csv` (`Tarih,Kod,Islem,Adet,Fiyat`; Islem = AL / SAT)
 
