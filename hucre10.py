@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════
-#  HÜCRE 10 — ZİRVE STRATEJİSİ  (v1.2 — 16.10.2026)
+#  HÜCRE 10 — ZİRVE STRATEJİSİ  (v1.3 — 16.10.2026)
 #  Backtestten en sağlam geçen kural (hücre 9 v2 + bağımsız istatistik incelemesi):
 #    Her ayın ilk işlem günü, günlük işlem hacmi ≥ 50 mn TL olan hisselerden
 #    52 haftalık zirvesine EN YAKIN 30 hisse — eşit ağırlık — ay sonuna kadar tut.
@@ -21,6 +21,7 @@
 #  v1.2: GERÇEK PORTFÖY: Drive'daki gercek_portfoy.csv'den (Tarih, Kod, Islem, Adet, Fiyat)
 #        aldığın hisseleri okuyup maliyet, kâr/zarar ve TUT / SAT durumunu gösteriyor;
 #        kâğıt üzerindeki 30 hisseyle karşılaştırıyor.
+#  v1.3: Gerçek portföyün fiyatı İsyatırım'ın son kapanışından (Yahoo bir günü boş bıraksa da güncel).
 # ═══════════════════════════════════════════════════════════════
 import os
 import pandas as pd
@@ -209,6 +210,17 @@ if os.path.exists(PORTFOY_YOLU):
     ip['Kod'] = ip['Kod'].astype(str).str.upper().str.strip()
     ip['Islem'] = ip['Islem'].astype(str).str.upper().str.strip()
     tum_fiyat = pd.read_excel(SISTEM_YOLU).rename(columns={'Sembol': 'Kod'}).set_index('Kod')['Son Fiyat']
+    fiyat_kaynak = 'BIST_Sistem (Yahoo) kapanışı'
+    ozet_yolu = f'{DRIVE}/temelozet.xlsx'               # İsyatırım: her gün hücre 1 indiriyor, en güncel kapanış
+    try:
+        if os.path.exists(ozet_yolu) and (datetime.now().timestamp() - os.path.getmtime(ozet_yolu)) < 36 * 3600:
+            oz = pd.read_excel(ozet_yolu)
+            kk = next(c for c in oz.columns if str(c).replace(' ', '').startswith('Kapanış'))
+            isy = pd.to_numeric(oz.set_index(oz['Kod'].astype(str).str.upper().str.strip())[kk], errors='coerce').dropna()
+            tum_fiyat = isy.combine_first(tum_fiyat)
+            fiyat_kaynak = 'İsyatırım son kapanış'
+    except Exception:
+        pass
     satirlar = []; gerceklesen = 0.0
     for kod, g in ip.sort_values('Tarih', kind='stable').groupby('Kod', sort=False):
         adet = 0.0; maliyet = 0.0                      # ortalama maliyet yöntemi
@@ -239,7 +251,7 @@ if os.path.exists(PORTFOY_YOLU):
         gp = pd.DataFrame(satirlar)
         fiyatli = gp[gp['Değer (TL)'].notna()]
         top_m = fiyatli['Maliyet (TL)'].sum(); top_d = fiyatli['Değer (TL)'].sum(min_count=1)
-        print(f"\n💼 GERÇEK PORTFÖYÜN ({len(gp)} hisse) — fiyatlar {'son kapanış' if 'Veri Tarihi' not in df else 'BIST_Sistem kapanışı'}:")
+        print(f"\n💼 GERÇEK PORTFÖYÜN ({len(gp)} hisse) — fiyatlar: {fiyat_kaynak}")
         print(gp.to_string(index=False))
         if pd.notna(top_d) and top_m > 0:
             gp_ozet.append(f"Toplam: maliyet {top_m:,.0f} TL → değer {top_d:,.0f} TL | K/Z {top_d - top_m:+,.0f} TL (%{(top_d / top_m - 1) * 100:+.1f})")
