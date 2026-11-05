@@ -41,7 +41,7 @@ Ay içinde bir şey yapma. Kurallar hücre 10'un başında ve Excel'deki "🧭 Z
 | Dosya | Ne yapar | Yapay zekâ kredisi |
 |---|---|---|
 | `hucre1.py` | Drive bağlantısı, Türkiye saati, İsyatırım dosyalarını otomatik indirme, dosya yaşları | — |
-| `hucre2.py` | Temel tarama, puanlama, hedef fiyat → `BIST_Sistem.xlsx` | — |
+| `hucre2.py` | Temel tarama, puanlama, hedef fiyat → `BIST_Sistem.xlsx` (fiyat ve işlem hacmi İş Yatırım'dan, bilançolar Yahoo'dan) | — |
 | `hucre3.py` | AL listesindeki hisselerin son 14 gün haberleri | — |
 | `hucre4.py` | Teknik analiz ve Excel sayfaları | — |
 | `hucre5.py` | Yapay zekâ kütüphanesini kurar (hücre 6 ve 8 için) | — |
@@ -52,6 +52,15 @@ Ay içinde bir şey yapma. Kurallar hücre 10'un başında ve Excel'deki "🧭 Z
 | `hucre10.py` | **Zirve Stratejisi** — kullanılan strateji | — |
 
 Zirve Stratejisi sadece **1 → 2 → 10** ister. 3–9 isteğe bağlı.
+
+## Veri kaynakları
+
+- **Fiyat geçmişi ve TL işlem hacmi (hücre 2, v2.6'dan beri):** İş Yatırım `HisseTekil` servisi — Borsa İstanbul
+  resmi verisi, bölünme ve temettüye göre düzeltilmiş (`HGDG_` alanları). İş Yatırım bir hisse için cevap vermezse
+  o hisse Yahoo'dan alınır; hangi kaynağın kullanıldığı `BIST_Sistem.xlsx`'teki **Fiyat Kaynağı** sütununda yazar.
+  Yahoo bazı günleri bütün hisseler için boş bırakıyordu (15.10 ve 04.11.2026).
+- **Bilanço, gelir tablosu, hisse bilgileri:** Yahoo (yfinance) + İş Yatırım temel tablolar (hücre 1).
+- Hücre 4, 7 ve 9 fiyat geçmişini hâlâ Yahoo'dan alıyor.
 
 ## Drive'daki dosyalar (`MyDrive/isyatirim`)
 

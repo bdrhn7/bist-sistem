@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════
-#  HÜCRE 2 — TEMEL TARAMA  (v2.5 — 16.10.2026)
+#  HÜCRE 2 — TEMEL TARAMA  (v2.6 — 05.11.2026)
 #  v2 değişiklikleri:
 #   - Hedef fiyat gerçek tarihi F/K ile: o yılın fiyatı ÷ o yılın HBK
 #     (eskiden bugünkü fiyat ÷ eski HBK kullanılıyordu; hedef fiyatı
@@ -40,6 +40,13 @@
 #     hisselerin Son Fiyat'ı boş geldi, puanlar çöktü (hiçbir hisse 55'i geçmedi)
 #   - Yeni sütun: Veri Tarihi (fiyatın hangi günün kapanışı olduğu); sonda
 #     fiyatların hangi günden olduğu ve beklenen günden eskiyse uyarı yazılıyor
+#   v2.6:
+#   - Fiyat geçmişi ve işlem hacmi artık İş Yatırım'dan (Borsa İstanbul resmi verisi,
+#     bölünme ve temettüye göre düzeltilmiş). Yahoo sık sık bir günü boş bırakıyordu
+#     (15.10 ve 04.11.2026'da bütün hisselerde). İş Yatırım cevap vermezse o hisse için
+#     Yahoo kullanılıyor. Şirket bilançoları ve hisse bilgileri hâlâ Yahoo'dan.
+#   - Ort. TL Hacim artık gerçek TL işlem hacminden (eskiden kapanış × adet tahminiydi)
+#   - Yeni sütun: Fiyat Kaynağı
 # ═══════════════════════════════════════════════════════════════
 import yfinance as yf
 import pandas as pd
@@ -99,6 +106,44 @@ def tamamlanmis_gunler(df_h):
             df_h = df_h[[d.date() != simdi.date() for d in df_h.index]]
     except: pass
     return df_h
+
+# ── FİYAT GEÇMİŞİ: İş Yatırım (Borsa İstanbul resmi verisi), olmazsa Yahoo ──
+FIYAT_KAYNAGI = 'isyatirim'   # 'isyatirim' ya da 'yahoo'
+ISY_GECMIS_URL = 'https://www.isyatirim.com.tr/_layouts/15/Isyatirim.Website/Common/Data.aspx/HisseTekil'
+ISY_ESZAMANLI = 6             # aynı anda kaç hisse indirilsin
+
+def isy_gecmis(kod, yil=5):
+    """İş Yatırım'dan günlük fiyat geçmişi (bölünme/temettüye göre düzeltilmiş, HGDG_ alanları).
+    Yahoo ile aynı sütunlar: Close, High, Low, Volume (adet) + TLHacim (gerçek TL işlem hacmi).
+    Bazı hisselerde uzun aralık hata veriyor → 4, 3, 2, 1 yıl denenir. Olmazsa None."""
+    bitis = datetime.now()
+    for y in (yil, 4, 3, 2, 1):
+        bas = bitis - pd.DateOffset(years=y)
+        j = None
+        for deneme in range(2):
+            try:
+                r = requests.get(ISY_GECMIS_URL, timeout=40, headers={'User-Agent': 'Mozilla/5.0'},
+                                 params={'hisse': kod, 'startdate': f'{bas:%d-%m-%Y}', 'enddate': f'{bitis:%d-%m-%Y}'})
+                j = r.json()
+                break
+            except Exception:
+                time.sleep(2)
+        if not j or not j.get('ok') or not j.get('value'):
+            continue
+        d = pd.DataFrame(j['value'])
+        sayi = lambda c: pd.to_numeric(d[c], errors='coerce').values
+        g = pd.DataFrame({'Close': sayi('HGDG_KAPANIS'), 'High': sayi('HGDG_MAX'), 'Low': sayi('HGDG_MIN'),
+                          'AOF': sayi('HGDG_AOF'), 'TLHacim': sayi('HGDG_HACIM')},
+                         index=pd.to_datetime(d['HGDG_TARIH'], format='%d-%m-%Y'))
+        g = g[~g.index.duplicated(keep='last')].sort_index()
+        g = g[g['Close'] > 0]
+        g['High'] = g['High'].where(g['High'] > 0, g['Close'])
+        g['Low'] = g['Low'].where(g['Low'] > 0, g['Close'])
+        g['TLHacim'] = g['TLHacim'].fillna(0)
+        g['Volume'] = (g['TLHacim'] / g['AOF'].where(g['AOF'] > 0, g['Close'])).fillna(0)
+        if len(g):
+            return g.drop(columns='AOF')
+    return None
 
 # ── DÖVİZ: dolar/euro ile rapor veren şirketler için ─────────
 _KUR_CACHE = {}
@@ -257,6 +302,17 @@ else:
 
 print(f'✅ KAP: {len(kap_alimlar)} hissede bildirim'
       + ('' if KAP_PUANA_KAT else '  (puana katılmıyor, sadece bilgi)'))
+FIYAT_GECMIS = {}
+if FIYAT_KAYNAGI == 'isyatirim':
+    from concurrent.futures import ThreadPoolExecutor
+    print(f'\n⏳ Fiyat geçmişi İş Yatırım\'dan indiriliyor ({len(HISSELER)} hisse)...')
+    with ThreadPoolExecutor(max_workers=ISY_ESZAMANLI) as _hav:
+        for _kod, _g in zip(HISSELER, tqdm(_hav.map(isy_gecmis, HISSELER), total=len(HISSELER), desc='İş Yatırım')):
+            if _g is not None and len(_g) >= 51:
+                FIYAT_GECMIS[_kod] = _g
+    _eksik = len(HISSELER) - len(FIYAT_GECMIS)
+    print(f'✅ İş Yatırım: {len(FIYAT_GECMIS)} hisse' + (f' | {_eksik} hisse için Yahoo kullanılacak' if _eksik else ''))
+
 print(f'\n⏳ Tarama başlıyor ({len(HISSELER)} hisse)...\n')
 
 sonuc           = []
@@ -269,7 +325,10 @@ for h in tqdm(HISSELER, desc='Taranıyor'):
         inc  = t.income_stmt
         bal  = t.balance_sheet
         cf   = t.cashflow
-        hist = t.history(period='5y')     # tarihi F/K için 5 yıl
+        hist = FIYAT_GECMIS.get(h)        # tarihi F/K için 5 yıl
+        fiyat_kaynagi = 'İş Yatırım'
+        if hist is None:
+            hist = t.history(period='5y'); fiyat_kaynagi = 'Yahoo'
         tur  = sektor_turu(h)
 
         if hist is None or len(hist) < 51:
@@ -320,7 +379,10 @@ for h in tqdm(HISSELER, desc='Taranıyor'):
         son_1ay_adet = hist['Volume'].iloc[-20:].mean()
         onceki_adet  = hist['Volume'].iloc[-60:-20].mean()
         hacim_artis  = ((son_1ay_adet - onceki_adet) / onceki_adet * 100) if onceki_adet > 0 else 0
-        tl_hacim_ort = (hist['Close'] * hist['Volume']).iloc[-20:].mean() / 1_000_000
+        if 'TLHacim' in hist.columns:                 # İş Yatırım: gerçek TL işlem hacmi
+            tl_hacim_ort = hist['TLHacim'].iloc[-20:].mean() / 1_000_000
+        else:                                          # Yahoo: kapanış × adet
+            tl_hacim_ort = (hist['Close'] * hist['Volume']).iloc[-20:].mean() / 1_000_000
         if tl_hacim_ort >= 200:  likidite = '🟢 Yüksek'
         elif tl_hacim_ort >= 50: likidite = '🟢 Normal'
         elif tl_hacim_ort >= 10: likidite = '🟡 Düşük'
@@ -626,6 +688,7 @@ for h in tqdm(HISSELER, desc='Taranıyor'):
             'Sembol':               h,
             'Son Fiyat':            round(son_fiyat, 2),
             'Veri Tarihi':          pd.Timestamp(hist.index[-1]).strftime('%Y-%m-%d'),
+            'Fiyat Kaynağı':        fiyat_kaynagi,
             'Hedef (Kötü)':         None,
             'Hedef (Ort.)':         None,
             'Hedef (İyi)':          None,
@@ -791,8 +854,10 @@ if not (_beklenen.weekday() < 5 and (_simdi.hour, _simdi.minute) >= (18, 15)):
 _vt = pd.to_datetime(df['Veri Tarihi'])
 _en_cok = _vt.mode().iloc[0]
 print(f"\n📅 Fiyatlar {_en_cok:%d.%m.%Y} kapanışından ({int((_vt == _en_cok).sum())}/{len(df)} hisse)")
+if 'Fiyat Kaynağı' in df.columns:
+    print('   Fiyat kaynağı: ' + ', '.join(f'{a} {b}' for a, b in df['Fiyat Kaynağı'].value_counts().items()))
 if _en_cok < _beklenen:
-    print(f"⚠️  Beklenen son kapanış {_beklenen:%d.%m.%Y}. Yahoo o günün fiyatlarını henüz vermemiş olabilir "
+    print(f"⚠️  Beklenen son kapanış {_beklenen:%d.%m.%Y}. O günün fiyatları henüz yayımlanmamış olabilir "
           f"(bayram tatili değilse). 1-2 saat sonra hücre 2'yi tekrar çalıştır.")
 _bos = int(df['Son Fiyat'].isna().sum())
 if _bos:
